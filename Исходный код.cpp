@@ -16,19 +16,23 @@ int main()
 {
     int n, m;
 
-    cout << "Write number of tests: ";
+   /* cout << "Write number of tests: ";
     std::cin >> n;
-    testingInit(n);
+    testingInit(n);*/
 
-    cout << "\nWrite size of array and number of tests: ";
+   /* cout << "\nWrite size of array and number of tests: ";
     cin >> n >> m;
-    testingIsPossibleKey(n, m);
+    testingIsPossibleKey(n, m);*/
 
-    cout << "\nWrite size of array and number of tests: ";
+   /* cout << "\nWrite size of array and number of tests: ";
     cin >> n >> m;
-    testingHasInsertEraseSize(n, m);
+    testingHasInsertEraseSize(n, m);*/
 
-    cout << "\n";
+    cout << "Write size of array: ";
+    std::cin >> n;
+    testingInitOnCurrentSize(n);
+
+    cout << "\nFinish";
     system("pause");
 	return 0;
 }
