@@ -193,6 +193,7 @@ private:
 public:
     void init(std::vector <unsigned long long> &arr)
     {
+        clock_t t = clock();
         if (arr.size() == 0)
             return;
         _size = 0;
@@ -217,9 +218,11 @@ public:
             throw 1;
             return;
         }
-
+        std::cout << clock() - t << std::endl;
+        t = clock();
         for (std::vector < PerfectHashSetLevel2 >::iterator it = firstLevel.begin(); it != firstLevel.end(); it++)
             it->createHashSet();
+        std::cout << clock() - t << std::endl;
     }
     bool isPossibleKey(unsigned long long curr)
     {
