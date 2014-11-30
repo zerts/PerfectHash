@@ -319,3 +319,24 @@ void testingHasInsertEraseSize(int n, int m)
             cout << "-";
     }
 }
+
+void testingInitOnCurrentSize(int n)
+{
+    clock_t t;
+    set <unsigned long long> keys;
+    while (keys.size() != n)
+    {
+        unsigned long long newKey = getRand();
+        keys.insert(newKey);
+    }
+    vector <unsigned long long> arr;
+    for (set<unsigned long long>::iterator it = keys.begin(); it != keys.end(); it++)
+    {
+        arr.push_back(*it);
+    }
+    PerfectHashSet PHS;
+    cout << "Array is ready\n";
+    t = clock();
+    PHS.init(arr);
+    cout << clock() - t << endl;
+}
