@@ -12,27 +12,20 @@
 #include <string>
 #include "tests.h"
 
+void testing(int n, int m)
+{
+    testingInit(m);
+    testingIsPossibleKey(n, m);
+    testingHasInsertEraseSize(n, m);
+    testingInitOnCurrentSize(n);
+}
+
 int main()
 {
     int n, m;
-
-   /* cout << "Write number of tests: ";
-    std::cin >> n;
-    testingInit(n);*/
-
-   /* cout << "\nWrite size of array and number of tests: ";
-    cin >> n >> m;
-    testingIsPossibleKey(n, m);*/
-
-   /* cout << "\nWrite size of array and number of tests: ";
-    cin >> n >> m;
-    testingHasInsertEraseSize(n, m);*/
-
-    cout << "Write size of array: ";
-    std::cin >> n;
-    testingInitOnCurrentSize(n);
-
-    cout << "\nFinish";
+    std::cin >> n >> m;
+    testing(n, m);
+    std::cout << "\nFinish";
     system("pause");
 	return 0;
 }
