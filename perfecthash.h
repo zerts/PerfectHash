@@ -5,24 +5,26 @@
 #include <cmath>
 #include <cstdlib>
 #include <algorithm>
+#include <string>
 #include <climits>
 #include "testlib.h"
 
-const unsigned long long _SUM_SQR_SIZE = 8ULL;
+const unsigned long long _SUM_SQR_SIZE = 3ULL;
 
 unsigned long long mysqr(const unsigned long long &x)
 {
     return x * x;
 }
 
-class HashSet
+class IHashSet
 {
 public:
     virtual bool isPossibleKey(unsigned long long) = 0;
     virtual bool has(unsigned long long) = 0;
     virtual void insert(unsigned long long) = 0;
     virtual void erase(unsigned long long) = 0;
-    virtual unsigned long long size() const = 0;
+    virtual int size() const = 0;
+    virtual void init(const std::vector <unsigned long long> &) = 0;
 };
 
 class Hash
@@ -36,12 +38,12 @@ public:
         firstCoefficient = rnd.next(1LLU, PRIME - 1LLU);
         secondCoefficient = rnd.next(0LLU, PRIME - 1LLU);
     }
-    void getCoefficients(unsigned long long first, unsigned long long second)
+    void setCoefficients(unsigned long long first, unsigned long long second)
     {
         firstCoefficient = first;
         secondCoefficient = second;
     }
-    void makeSize(unsigned int size)
+    void setSetSize(unsigned int size)
     {
         setSize = size;
     }
@@ -51,10 +53,56 @@ public:
     }
 };
 
-class PerfectHashSetLevel2 : public HashSet
+class FindEqualElements : public  std::exception
+{
+    std::string message;
+public:
+    explicit FindEqualElements(unsigned long long element)
+    {
+        message = "There are two or more " + std::to_string(element) + " elements\n";
+    }
+    virtual const char* what() const throw()
+    {
+        return message.c_str();
+    }
+};
+
+class FindImpossibleElement : public  std::exception
+{
+    std::string message;
+public:
+    explicit FindImpossibleElement(unsigned long long element)
+    {
+        message = "There are no " + std::to_string(element) + " element in basic array\n";
+    }
+    virtual const char* what() const throw()
+    {
+        return message.c_str();
+    }
+};
+
+class PerfectHashSetLevel2 : public IHashSet
 {
     Hash hash;
-    std::vector <unsigned long long> body, hashBody, used;
+    std::vector <unsigned long long> body, hashBody;
+    std::vector<int> used;
+    int _size;
+    void stupidHasEqualKeys()
+    {
+        if (body.size() > 1)
+        {
+            for (int i = 0; i + 1 < body.size(); i++)
+            {
+                for (int j = i + 1; j < body.size(); j++)
+                {
+                    if (body[i] == body[j])
+                    {
+                        throw FindEqualElements(body[i]);
+                    }
+                }
+            }
+        }
+    }
 public:
     PerfectHashSetLevel2()
     {
@@ -62,7 +110,7 @@ public:
         hashBody.clear();
         used.clear();
     }
-    unsigned long long operator[](const unsigned long long &index)
+    const unsigned long long & operator[](const unsigned long long &index)
     {
         return body[index];
     }
@@ -82,38 +130,51 @@ public:
         }
         return false;
     }
-    void createHashSet()
+    void init(const std::vector<unsigned long long> &arr)
     {
-        hash.makeSize(mysqr(body.size()));
+        _size = 0;
+        hash.setSetSize(mysqr(arr.size()));
         hash.generateCoefficients();
         while (hasCollide())
             hash.generateCoefficients();
-        hashBody.resize(mysqr(body.size()));
-        used.assign(mysqr(body.size()), 0);
-        for (std::vector <unsigned long long>::iterator it = body.begin(); it != body.end(); it++)
+        hashBody.resize(mysqr(arr.size()));
+        used.assign(mysqr(arr.size()), 0);
+        for (int i = 0; i < arr.size(); i++)
         {
-            hashBody[hash(*it)] = *it;
+            hashBody[hash(arr[i])] = arr[i];
         }
+    }
+    void createHashSet()
+    {
+        stupidHasEqualKeys();
+        init(body);
     }
     bool isPossibleKey(unsigned long long curr)
     {
-        return (hashBody.size() != 0 && hashBody[hash(curr)] == curr);
+        return (!hashBody.empty() && hashBody[hash(curr)] == curr);
     }
     bool has(unsigned long long curr)
     {
-        return (used[hash(curr)] == 1);
+        if (isPossibleKey(curr))
+            return (used[hash(curr)] == 1);
     }
     void insert(unsigned long long key)
     {
         used[hash(key)] = 1;
+        _size++;
     }
     void erase(unsigned long long key)
     {
         used[hash(key)] = 0;
+        _size--;
     }
-    unsigned long long size() const
+    int tableSize()
     {
         return body.size();
+    }
+    int size() const
+    {
+        return _size;
     }
     void out()
     {
@@ -122,65 +183,47 @@ public:
     }
 };
 
-class PerfectHashSet : public HashSet
+class PerfectHashSet : public IHashSet
 {
 private:
     Hash hash;
-    unsigned long long _size, numberOfElements, a, b;
+    unsigned long long numberOfElements, a, b;
+    int _size;
     std::vector < PerfectHashSetLevel2 > firstLevel;
     unsigned long long firstA, firstB;
     bool goodFirstLevel()
     {
-        if (firstLevel.size() == 0)
+        if (firstLevel.empty())
             return false;
         unsigned long long sum = 0ULL;
         for (std::vector < PerfectHashSetLevel2 >::iterator it = firstLevel.begin(); it != firstLevel.end(); it++)
-            sum += mysqr(it->size());
+            sum += mysqr(it->tableSize());
         return sum <= (8 * numberOfElements);
     }
     bool hasEqualKeys()
     {
         for (std::vector < PerfectHashSetLevel2 >::iterator it = firstLevel.begin(); it != firstLevel.end(); it++)
         {
-            if (it->size() == 3)
+            if (it->tableSize() == 3)
             {
-                if ((*it)[0] == (*it)[1] || (*it)[0] == (*it)[2] || (*it)[1] == (*it)[2])
-                {
-                    return true;
-                }
+                if ((*it)[0] == (*it)[1])
+                    throw FindEqualElements((*it)[0]);
+                if ((*it)[0] == (*it)[2])
+                    throw FindEqualElements((*it)[0]);
+                if ((*it)[1] == (*it)[2])
+                    throw FindEqualElements((*it)[1]);
             }
-            else if (it->size() > 0llu)
+            else if (it->tableSize() > 0llu)
             {
-                for (unsigned long long i = 0llu; i < it->size() - 1llu; i++)
+                for (int i = 0; i + 1 < it->tableSize(); i++)
                 {
-                    if ((*it)[i] == (*it)[i + 1llu])
+                    if ((*it)[i] == (*it)[i + 1])
                     {
-                        return true;
+                        throw FindEqualElements((*it)[i]);
                     }
                 }
             }
         }
-        return false;
-    }
-    bool stupidHasEqualKeys()
-    {
-        for (std::vector < PerfectHashSetLevel2 >::iterator it = firstLevel.begin(); it != firstLevel.end(); it++)
-        {
-            if (it->size() > 1)
-            {
-                for (unsigned long long i = 0llu; i < it->size() - 1llu; i++)
-                {
-                    for (unsigned long long j = i + 1; j < it->size(); j++)
-                    {
-                        if ((*it)[i] == (*it)[j])
-                        {
-                            return true;
-                        }
-                    }
-                }
-            }
-        }
-        return false;
     }
     void out()
     {
@@ -190,39 +233,34 @@ private:
             std::cout << std::endl;
         }
     }
-public:
-    void init(std::vector <unsigned long long> &arr)
+    bool goodInsertErase(unsigned long long key, bool isHas)
     {
-        clock_t t = clock();
-        if (arr.size() == 0)
-            return;
+        if (!isPossibleKey(key))
+            throw FindImpossibleElement(key);
+        return has(key) == isHas;
+    }
+public:
+    void init(const std::vector <unsigned long long> &arr)
+    {
         _size = 0;
+        if (arr.empty())
+        {
+            firstLevel.clear();
+            return;
+        }
         numberOfElements = arr.size();
-        hash.makeSize(numberOfElements);
+        hash.setSetSize(numberOfElements);
         while (!goodFirstLevel())
         {
+            firstLevel.clear();
             firstLevel.resize(numberOfElements);
             hash.generateCoefficients();
-            for (std::vector <unsigned long long>::iterator it = arr.begin(); it != arr.end(); it++)
-                firstLevel[hash(*it)].push(*it);
-            if (hasEqualKeys())
-            {
-                //std::cout << "Array has equal keys!\n";
-                throw 1;
-                return;
-            }
+            for (int i = 0; i < arr.size(); i++)
+                firstLevel[hash(arr[i])].push(arr[i]);
+            hasEqualKeys();
         }
-        if (stupidHasEqualKeys())
-        {
-            //std::cout << "Array has equal keys!\n";
-            throw 1;
-            return;
-        }
-        std::cout << clock() - t << std::endl;
-        t = clock();
         for (std::vector < PerfectHashSetLevel2 >::iterator it = firstLevel.begin(); it != firstLevel.end(); it++)
             it->createHashSet();
-        std::cout << clock() - t << std::endl;
     }
     bool isPossibleKey(unsigned long long curr)
     {
@@ -236,7 +274,7 @@ public:
     }
     void insert(unsigned long long curr)
     {
-        if (isPossibleKey(curr) && !(has(curr)))
+        if (goodInsertErase(curr, false))
         {
             firstLevel[hash(curr)].insert(curr);
             _size++;
@@ -244,13 +282,13 @@ public:
     }
     void erase(unsigned long long curr)
     {
-        if (isPossibleKey(curr) && has(curr))
+        if (goodInsertErase(curr, true))
         {
             firstLevel[hash(curr)].erase(curr);
             _size--;
         }
     }
-    unsigned long long size() const
+    int size() const
     {
         return _size;
     }
