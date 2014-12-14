@@ -15,40 +15,54 @@ unsigned long long getRand()
     return rnd.next(0ull, (unsigned long long)(LLONG_MAX) - 2ull);
 }
 
-bool isEqualInTest(int type)
+const unsigned int NUMBER_OF_TESTS = 10;
+
+enum EInitTestType {
+    EITT_SMALL_TESt_NO_EQUAL = 1u,
+    EITT_TEST_NO_EQUAL = 2u,
+    EITT_ALL_EQUAL = 3u,
+    EITT_TWO_DIFFERENT = 4u,
+    EITT_PAIRS_ELEMENTS = 5u,
+    EITT_LAST_EQUAL = 6u,
+    EITT_TWO_LAST_EQUAL = 7u,
+    EITT_SQRT_PARTS_OF_EQUAL = 8u,
+    EITT_BIG_NUMBERS = 9u
+};
+
+bool isEqualInTest(unsigned int type)
 {
     switch (type)
     {
-    case 1:
+    case EITT_SMALL_TESt_NO_EQUAL:
         return false;
-    case 2:
+    case EITT_TEST_NO_EQUAL:
         return false;
-    case 3:
+    case EITT_ALL_EQUAL:
         return true;
-    case 4:
+    case EITT_TWO_DIFFERENT:
         return true;
-    case 5:
+    case EITT_PAIRS_ELEMENTS:
         return true;
-    case 6:
+    case EITT_LAST_EQUAL:
         return true;
-    case 7:
+    case EITT_TWO_LAST_EQUAL:
         return true;
-    case 8:
+    case EITT_SQRT_PARTS_OF_EQUAL:
         return true;
-    case 9:
+    case EITT_BIG_NUMBERS:
         return false;
     default:
         return false;
     }
 }
 
-void generateSet(set<unsigned long long> &s, unsigned int size)
+void generateSet(set<unsigned long long> &s, const unsigned int size)
 {
     for (unsigned int i = 0u; i < size; i++)
         s.insert(getRand());
 }
 
-void setToArray(set<unsigned long long> &s, vector<unsigned long long> &arr)
+void setToArray(set<unsigned long long> const &s, vector<unsigned long long> &arr)
 {
     for (set<unsigned long long>::iterator it = s.begin(); it != s.end(); it++)
         arr.push_back(*it);
@@ -167,7 +181,8 @@ void testingInitOnCurrentArray(vector <unsigned long long> &arr, int type)
 
 bool needAllPermutations(int type, unsigned int size)
 {
-    return (size < 13) && (type == 1 || type == 4 || type == 5 || type == 6 || type == 7);
+    return (size < 13) && (type == EITT_SMALL_TESt_NO_EQUAL || type == EITT_TWO_DIFFERENT || 
+            type == EITT_PAIRS_ELEMENTS || type == EITT_LAST_EQUAL || type == EITT_TWO_LAST_EQUAL);
 }
 
 int fact(int n)
@@ -178,7 +193,7 @@ int fact(int n)
     return r;
 }
 
-void testingInit(int n)
+void testingInit(unsigned int n)
 {
     //1 - Без одинаковых ключей. Маленькие размеры – все перестановки.
     //2 - Без одинаковых ключей. Случайный.
@@ -189,20 +204,22 @@ void testingInit(int n)
     //7 - k0, k1, k2, …, kn-3, k0, k1. Те же
     //8 - (k0, k1, k2, …, k sqrt(n)) * sqrt(n). Те же + random_shuffle кусков.
     //9 - Большие значения ключей.
-    for (int type = 1; type < 10; type++)
+    for (unsigned int type = 1u; type < NUMBER_OF_TESTS; type++)
     {
-        for (int i = 0; i < n; i++)
+        for (unsigned int i = 0u; i < n; i++)
         {
             vector< unsigned long long > arr = generateTest(type);
             testingInitOnCurrentArray(arr, type);
             if (needAllPermutations(type, arr.size()))
             {
                 int numberOfPermutations = fact(arr.size());
-                for (int i = 0; i < numberOfPermutations; i++)
+                do
                 {
-                    next_permutation(arr.begin(), arr.end());
                     testingInitOnCurrentArray(arr, type);
+                    next_permutation(arr.begin(), arr.end());
+                    numberOfPermutations--;
                 }
+                while (numberOfPermutations);
             }
             else
             {
@@ -213,7 +230,7 @@ void testingInit(int n)
     }
 }
 
-void testingIsPossibleKey(int n, int m)
+void testingIsPossibleKey(unsigned int n, unsigned int m)
 {
     set <unsigned long long> keys;
     while (keys.size() != n)
@@ -258,9 +275,9 @@ void checkElementInArray(unsigned long long elem, set <unsigned long long> &keys
         cout << "-NO";
 }
 
-void tryInsertErase(int type, unsigned long long elem, PerfectHashSet &PHS, set <unsigned long long> &keys)
+void tryInsertErase(bool isInsert, unsigned long long elem, PerfectHashSet &PHS, set <unsigned long long> &keys)
 {
-    if (type == 1)
+    if (isInsert)
     {
         try
         {
@@ -271,7 +288,7 @@ void tryInsertErase(int type, unsigned long long elem, PerfectHashSet &PHS, set 
             checkElementInArray(elem, keys);
         }
     }
-    if (type == 2)
+    else
     {
         try
         {
@@ -284,31 +301,16 @@ void tryInsertErase(int type, unsigned long long elem, PerfectHashSet &PHS, set 
     }
 }
 
-void testingHasInsertEraseSize(int n, int m)
+void testingEraseAfterInsert(set <unsigned long long> &keys, vector <unsigned long long> &arr, PerfectHashSet &PHS)
 {
-    set <unsigned long long> keys;
-    while (keys.size() != n)
-    {
-        unsigned long long newKey = getRand();
-        keys.insert(newKey);
-    }
-    vector <unsigned long long> arr;
-    for (set<unsigned long long>::iterator it = keys.begin(); it != keys.end(); it++)
-    {
-        arr.push_back(*it);
-    }
-    PerfectHashSet PHS;
-    PHS.init(arr);
-    cout << "set is readyt\n";
-
     for (vector<unsigned long long>::iterator it = arr.begin(); it != arr.end(); it++)
     {
         if (!PHS.has(*it))
         {
-            tryInsertErase(1, *it, PHS, keys);
+            tryInsertErase(true, *it, PHS, keys);
             if (PHS.has(*it))
             {
-                tryInsertErase(2, *it, PHS, keys);
+                tryInsertErase(false, *it, PHS, keys);
                 if (!PHS.has(*it))
                     cout << "+";
                 else
@@ -325,10 +327,14 @@ void testingHasInsertEraseSize(int n, int m)
         }
     }
     cout << endl;
+}
+
+void testingDoubleErase(set <unsigned long long> &keys, vector <unsigned long long> &arr, PerfectHashSet &PHS)
+{
     for (set<unsigned long long>::iterator it = keys.begin(); it != keys.end(); it++)
     {
-        tryInsertErase(1, *it, PHS, keys);
-        tryInsertErase(1, *it, PHS, keys);
+        tryInsertErase(true, *it, PHS, keys);
+        tryInsertErase(true, *it, PHS, keys);
     }
     if (PHS.size() == keys.size())
         cout << "+";
@@ -341,12 +347,15 @@ void testingHasInsertEraseSize(int n, int m)
     else
         cout << "-NO";
     cout << endl;
+}
 
-    for (int i = 0; i < m; i++)
+void testingInsertEraseInRandomOrder(set <unsigned long long> &keys, vector <unsigned long long> &arr, PerfectHashSet &PHS, unsigned int number_of_tests)
+{
+    for (unsigned int i = 0u; i < number_of_tests; i++)
     {
         for (set<unsigned long long>::iterator it = keys.begin(); it != keys.end(); it++)
         {
-            tryInsertErase(2, *it, PHS, keys);
+            tryInsertErase(false, *it, PHS, keys);
         }
         int type = rnd.next(0, 1), key = rnd.next(0u, arr.size() - 1u);
         set <unsigned long long> s;
@@ -376,7 +385,29 @@ void testingHasInsertEraseSize(int n, int m)
     }
 }
 
-void testingInitOnCurrentSize(int n)
+void testingHasInsertEraseSize(unsigned int n, unsigned int m)
+{
+    set <unsigned long long> keys;
+    while (keys.size() != n)
+    {
+        unsigned long long newKey = getRand();
+        keys.insert(newKey);
+    }
+    vector <unsigned long long> arr;
+    for (set<unsigned long long>::iterator it = keys.begin(); it != keys.end(); it++)
+    {
+        arr.push_back(*it);
+    }
+    PerfectHashSet PHS;
+    PHS.init(arr);
+    cout << "set is readyt\n";
+
+    testingEraseAfterInsert(keys, arr, PHS);
+    testingDoubleErase(keys, arr, PHS);
+    testingInsertEraseInRandomOrder(keys, arr, PHS, m); 
+}
+
+void testingInitOnCurrentSize(unsigned int n)
 {
     clock_t t;
     set <unsigned long long> keys;
