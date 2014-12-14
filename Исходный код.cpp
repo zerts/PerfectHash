@@ -12,7 +12,7 @@
 #include <string>
 #include "tests.h"
 
-void testing(int n, int m)
+void testing(unsigned int n, unsigned int m)
 {
     testingInit(m);
     testingIsPossibleKey(n, m);
@@ -22,7 +22,7 @@ void testing(int n, int m)
 
 int main()
 {
-    int n, m;
+    unsigned int n, m;
     std::cin >> n >> m;
     testing(n, m);
     std::cout << "\nFinish";
